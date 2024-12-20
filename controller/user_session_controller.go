@@ -16,7 +16,7 @@ type create_session_req struct {
 	Password string `json:"password"`
 }
 
-func createSession(c echo.Context) error {
+func CreateSession(c echo.Context) error {
 	env := os.Getenv("ENV")
 	is_cookie_secure := env == "production"
 	r := new(create_session_req)
@@ -24,7 +24,7 @@ func createSession(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 	user := new(model.User)
-	err := model.DB.Where("UserID = ?", r.UserID).First(user).Error
+	err := model.DB.Where("user_id = ?", r.UserID).First(user).Error
 	if err != nil {
 		return c.NoContent(http.StatusForbidden)
 	}
@@ -38,9 +38,18 @@ func createSession(c echo.Context) error {
 			HttpOnly: true,
 			SameSite: http.SameSiteStrictMode,
 		}
-		sess.Values["UserId"] = user.UserID
+		sess.Values["UserID"] = user.UserID
 		sess.Save(c.Request(), c.Response())
 		return c.NoContent(http.StatusOK)
+	}
+	return c.NoContent(http.StatusForbidden)
+}
+
+func ReadSession(c echo.Context) error {
+	sess, _ := session.Get("session", c)
+	user_id, is_ok := sess.Values["UserID"].(string)
+	if is_ok {
+		return c.String(http.StatusOK, user_id)
 	}
 	return c.NoContent(http.StatusForbidden)
 }
