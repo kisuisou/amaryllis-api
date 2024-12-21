@@ -26,6 +26,7 @@ func main() {
 		e.POST("/users", controller.CreateUser)
 		e.GET("/signin", controller.ReadSession)
 		e.POST("/signin", controller.CreateSession)
+		e.DELETE("/signin", controller.DeleteSession)
 		e.Logger.Fatal(e.Start(":1323"))
 	} else if flag.Arg(0) == "migrate" {
 		model.Migrate()

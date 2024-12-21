@@ -53,3 +53,14 @@ func ReadSession(c echo.Context) error {
 	}
 	return c.NoContent(http.StatusForbidden)
 }
+
+func DeleteSession(c echo.Context) error {
+	sess, _ := session.Get("session", c)
+	_, is_ok := sess.Values["UserID"].(string)
+	if is_ok {
+		sess.Values["UserID"] = nil
+		sess.Save(c.Request(), c.Response())
+		return c.NoContent(http.StatusNoContent)
+	}
+	return c.NoContent(http.StatusForbidden)
+}
