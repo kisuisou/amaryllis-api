@@ -1,6 +1,7 @@
 package main
 
 import (
+	"amaryllis-api/book"
 	"amaryllis-api/controller"
 	"amaryllis-api/model"
 	"flag"
@@ -45,6 +46,8 @@ func main() {
 			model.DB.Create(&model.User{UserID: user_id, PasswordHash: hash})
 		}
 
+	} else if flag.Arg(0) == "get_book_data" {
+		fmt.Println(book.GetMetaData(flag.Arg(1)))
 	}
 
 }
