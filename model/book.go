@@ -1,7 +1,7 @@
 package model
 
-type BookData struct {
-	ISBN      string `gorm:"PrimaryKey"`
+type Book struct {
+	ISBN      string `gorm:"primaryKey"`
 	Title     string
 	Volume    string
 	Creator   string

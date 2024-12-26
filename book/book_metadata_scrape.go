@@ -33,7 +33,7 @@ type APIBookData struct {
 	} `xml:"channel>item"`
 }
 
-func GetMetaData(isbn string) model.BookData {
+func GetMetaData(isbn string) model.Book {
 	res, err := http.Get(fmt.Sprintf("%s?isbn=%s", api_url, isbn))
 	if err != nil {
 		log.Fatal(err)
@@ -66,7 +66,7 @@ func GetMetaData(isbn string) model.BookData {
 		}
 
 	}
-	book_data := new(model.BookData)
+	book_data := new(model.Book)
 	book_data.Title = data.Items[item_i].Title
 	creator := data.Items[item_i].Creator
 	re := regexp.MustCompile("(, )|[0-9]|-")

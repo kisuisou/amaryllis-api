@@ -38,7 +38,7 @@ func CreateSession(c echo.Context) error {
 			HttpOnly: true,
 			SameSite: http.SameSiteStrictMode,
 		}
-		sess.Values["UserID"] = user.UserID
+		sess.Values["UserID"] = user.ID
 		sess.Save(c.Request(), c.Response())
 		return c.NoContent(http.StatusOK)
 	}
