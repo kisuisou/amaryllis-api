@@ -16,6 +16,10 @@ type create_session_req struct {
 	Password string `json:"password"`
 }
 
+type read_session_res struct {
+	UserID string `json:"user_id"`
+}
+
 func CreateSession(c echo.Context) error {
 	env := os.Getenv("ENV")
 	is_cookie_secure := env == "production"
@@ -24,11 +28,11 @@ func CreateSession(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 	user := new(model.User)
-	err := model.DB.Where("user_id = ?", r.UserID).First(user).Error
+	err := model.DB.Where("id = ?", r.UserID).First(user).Error
 	if err != nil {
 		return c.NoContent(http.StatusForbidden)
 	}
-	is_pw_collect, err := argon2id.ComparePasswordAndHash(r.Password, user.PasswordHash)
+	is_pw_collect, _ := argon2id.ComparePasswordAndHash(r.Password, user.PasswordHash)
 	if is_pw_collect {
 		sess, _ := session.Get("session", c)
 		sess.Options = &sessions.Options{
@@ -49,7 +53,7 @@ func ReadSession(c echo.Context) error {
 	sess, _ := session.Get("session", c)
 	user_id, is_ok := sess.Values["UserID"].(string)
 	if is_ok {
-		return c.String(http.StatusOK, user_id)
+		return c.JSON(http.StatusOK, read_session_res{UserID: user_id})
 	}
 	return c.NoContent(http.StatusForbidden)
 }
