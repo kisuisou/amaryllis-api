@@ -38,7 +38,10 @@ func main() {
 		e.GET("/signin", controller.ReadSession)
 		e.POST("/signin", controller.CreateSession)
 		e.DELETE("/signin", controller.DeleteSession)
-		e.POST("/user_books", controller.CreateUserBook)
+		e.GET("/user_books/:isbn", controller.ReadUserBook)
+		e.POST("/user_books/:isbn", controller.CreateUserBook)
+		e.GET("/books_img/:isbn", controller.ReadBookImg)
+		e.POST("/books_img/:isbn", controller.CreateBookImg)
 		e.Logger.Fatal(e.Start(":1323"))
 	} else if flag.Arg(0) == "migrate" {
 		model.Migrate()
@@ -59,6 +62,8 @@ func main() {
 
 	} else if flag.Arg(0) == "get_book_data" {
 		fmt.Println(book.GetMetaData(flag.Arg(1)))
+	} else if flag.Arg(0) == "get_book_img" {
+		book.GetBookImg(flag.Arg(1))
 	}
 
 }
