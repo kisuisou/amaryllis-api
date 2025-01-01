@@ -38,10 +38,11 @@ func main() {
 		e.GET("/signin", controller.ReadSession)
 		e.POST("/signin", controller.CreateSession)
 		e.DELETE("/signin", controller.DeleteSession)
-		e.GET("/user_books/:isbn", controller.ReadUserBook)
-		e.POST("/user_books/:isbn", controller.CreateUserBook)
+		e.GET("/user_books/:user_id", controller.ReadUserBooks)
+		e.POST("/user_books", controller.CreateUserBook)
 		e.GET("/books_img/:isbn", controller.ReadBookImg)
 		e.POST("/books_img/:isbn", controller.CreateBookImg)
+		e.GET("/book/:isbn", controller.ReadBook)
 		e.Logger.Fatal(e.Start(":1323"))
 	} else if flag.Arg(0) == "migrate" {
 		model.Migrate()
