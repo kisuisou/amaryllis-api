@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const api_url = "https://ndlsearch.ndl.go.jp/api/opensearch"
@@ -34,6 +35,7 @@ type APIBookData struct {
 }
 
 func GetMetaData(isbn string) model.Book {
+	time.Sleep(1 * time.Second)
 	res, err := http.Get(fmt.Sprintf("%s?isbn=%s", api_url, isbn))
 	if err != nil {
 		log.Fatal(err)

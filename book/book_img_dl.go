@@ -6,11 +6,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 const book_img_url = "https://ndlsearch.ndl.go.jp/thumbnail/"
 
 func GetBookImg(isbn string) {
+	time.Sleep(1 * time.Second)
 	res, err := http.Get(fmt.Sprintf("%s%s.jpg", book_img_url, isbn))
 	if err != nil {
 		log.Fatal(err)
