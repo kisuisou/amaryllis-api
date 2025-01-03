@@ -19,6 +19,7 @@ func ReadBook(c echo.Context) error {
 	book_data := new(model.Book)
 	if err := model.DB.Where("isbn = ?", isbn).First(book_data).Error; err != nil {
 		*book_data = book.GetMetaData(isbn)
+		model.DB.Create(book_data)
 	}
 	return c.JSON(http.StatusOK, book_data)
 }

@@ -10,29 +10,16 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func CreateBookImg(c echo.Context) error {
-	isbn := c.Param("isbn")
-	sess, _ := session.Get("session", c)
-	_, is_ok := sess.Values["UserID"].(string)
-	if !is_ok {
-		return c.NoContent(http.StatusForbidden)
-	}
-	if !FindImg(isbn) {
-		book.GetBookImg(isbn)
-		return c.NoContent(http.StatusCreated)
-	}
-	return c.NoContent(http.StatusConflict)
-}
-
 func ReadBookImg(c echo.Context) error {
 	isbn := c.Param("isbn")
 	sess, _ := session.Get("session", c)
 	_, is_ok := sess.Values["UserID"].(string)
-	if !is_ok {
-		return c.NoContent(http.StatusForbidden)
-	}
 	if !FindImg(isbn) {
-		return c.NoContent(http.StatusNotFound)
+		if is_ok {
+			book.GetBookImg(isbn)
+		} else {
+			return c.NoContent(http.StatusForbidden)
+		}
 	}
 	return c.File(fmt.Sprintf("./book_imgs/%s.jpg", isbn))
 }
