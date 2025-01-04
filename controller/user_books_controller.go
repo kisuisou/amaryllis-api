@@ -11,7 +11,8 @@ import (
 )
 
 type create_user_book_req struct {
-	ISBN string `json:"isbn"`
+	ISBN   string `json:"isbn"`
+	IsRead bool   `json:"is_read"`
 }
 
 func CreateUserBook(c echo.Context) error {
@@ -36,6 +37,7 @@ func CreateUserBook(c echo.Context) error {
 	}
 	user_book_data.BookISBN = book_data.ISBN
 	user_book_data.UserID = user_id
+	user_book_data.IsRead = req.IsRead
 	model.DB.Omit("id").Create(user_book_data)
 	return c.NoContent(http.StatusCreated)
 }
