@@ -18,8 +18,8 @@ const api_url = "https://ndlsearch.ndl.go.jp/api/opensearch"
 type APIBookData struct {
 	XMLName xml.Name `xml:"rss"`
 	Items   []struct {
-		Title      string `xml:"http://purl.org/dc/elements/1.1/ title"`
-		Creator    string `xml:"http://purl.org/dc/elements/1.1/ creator"`
+		Title      string   `xml:"http://purl.org/dc/elements/1.1/ title"`
+		Creator    []string `xml:"http://purl.org/dc/elements/1.1/ creator"`
 		Identifier []struct {
 			Type    string `xml:"http://www.w3.org/2001/XMLSchema-instance type,attr"`
 			Content string `xml:",chardata"`
@@ -70,8 +70,8 @@ func GetMetaData(isbn string) model.Book {
 	}
 	book_data := new(model.Book)
 	book_data.Title = data.Items[item_i].Title
-	creator := data.Items[item_i].Creator
-	re := regexp.MustCompile("(, )|[0-9]|-")
+	creator := data.Items[item_i].Creator[0]
+	re := regexp.MustCompile("(, )|[0-9]|-|　| ")
 	creator = re.ReplaceAllString(creator, "")
 	book_data.Creator = creator
 	book_data.Publisher = strings.Join(data.Items[item_i].Publisher, "")
