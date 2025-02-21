@@ -70,10 +70,12 @@ func GetMetaData(isbn string) model.Book {
 	}
 	book_data := new(model.Book)
 	book_data.Title = data.Items[item_i].Title
-	creator := data.Items[item_i].Creator[0]
-	re := regexp.MustCompile("(, )|[0-9]|-|　| ")
-	creator = re.ReplaceAllString(creator, "")
-	book_data.Creator = creator
+	if len(data.Items[item_i].Creator) != 0 {
+		creator := data.Items[item_i].Creator[0]
+		re := regexp.MustCompile("(, )|[0-9]|-|　| ")
+		creator = re.ReplaceAllString(creator, "")
+		book_data.Creator = creator
+	}
 	book_data.Publisher = strings.Join(data.Items[item_i].Publisher, "")
 	book_data.ISBN = isbn
 	book_data.Volume = data.Items[item_i].Volume
