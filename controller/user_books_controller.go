@@ -3,7 +3,6 @@ package controller
 import (
 	"amaryllis-api/book"
 	"amaryllis-api/model"
-	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo-contrib/session"
@@ -13,6 +12,12 @@ import (
 type create_user_book_req struct {
 	ISBN   string `json:"isbn"`
 	IsRead bool   `json:"is_read"`
+}
+
+type user_books_res struct {
+	MetaData  model.Book
+	IsRead    bool
+	CreatedAt uint
 }
 
 func CreateUserBook(c echo.Context) error {
@@ -49,9 +54,15 @@ func ReadUserBooks(c echo.Context) error {
 	if !is_ok {
 		return c.NoContent(http.StatusForbidden)
 	}
-	user := new(model.User)
-	model.DB.Preload("Books").Where("id = ?", user_id).First(user)
-	user_books := user.Books
-	fmt.Println(user_books)
-	return c.JSON(http.StatusOK, user_books)
+	user_books := new([]model.UserBooks)
+	var response []user_books_res
+	model.DB.Where("user_id = ?", user_id).Find(user_books)
+	for _, user_book := range *user_books {
+		var res user_books_res
+		model.DB.Where("isbn = ?", user_book.BookISBN).First(&res.MetaData)
+		res.CreatedAt = uint(user_book.CreatedAt.Unix())
+		res.IsRead = user_book.IsRead
+		response = append(response, res)
+	}
+	return c.JSON(http.StatusOK, response)
 }
