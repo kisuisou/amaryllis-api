@@ -24,4 +24,6 @@ func Connect() {
 
 func Migrate() {
 	DB.AutoMigrate(&User{})
+	DB.AutoMigrate(&Book{})
+	DB.AutoMigrate(&UserBooks{})
 }

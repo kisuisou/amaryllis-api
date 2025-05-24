@@ -3,8 +3,9 @@ package model
 import "time"
 
 type User struct {
-	UserID       string `gorm:"primaryKey"`
+	ID           string `gorm:"primaryKey"`
 	PasswordHash string
 	CreatedAt    time.Time
 	IsAdmin      bool
+	Books        []Book `gorm:"many2many:user_books;"`
 }
