@@ -1,7 +1,9 @@
 package book
 
 import (
+	"amaryllis-api/data_store"
 	"amaryllis-api/model"
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -35,7 +37,17 @@ type APIBookData struct {
 }
 
 func GetMetaData(isbn string) model.Book {
-	time.Sleep(1 * time.Second)
+	ctx := context.Background()
+	last_fetch_str, err := data_store.Rdb.Get(ctx, "ndl_last_fetch").Result()
+	last_fetch, _ := strconv.Atoi(last_fetch_str)
+	if err == nil {
+		for {
+			now_unix_time := time.Now().Unix()
+			if now_unix_time-int64(last_fetch) > 1 {
+				break
+			}
+		}
+	}
 	res, err := http.Get(fmt.Sprintf("%s?isbn=%s", api_url, isbn))
 	if err != nil {
 		log.Fatal(err)
@@ -66,7 +78,6 @@ func GetMetaData(isbn string) model.Book {
 				ndlc = v.Content
 			}
 		}
-
 	}
 	book_data := new(model.Book)
 	book_data.Title = data.Items[item_i].Title
@@ -86,5 +97,9 @@ func GetMetaData(isbn string) model.Book {
 	book_data.NDC9 = ndc9
 	book_data.NDC10 = ndc10
 	book_data.NDLC = ndlc
+	err = data_store.Rdb.Set(ctx, "ndl_last_fetch", strconv.Itoa(int(time.Now().Unix())), 0).Err()
+	if err != nil {
+		log.Fatal(err)
+	}
 	return *book_data
 }
