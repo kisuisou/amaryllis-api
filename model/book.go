@@ -10,4 +10,5 @@ type Book struct {
 	NDLC      string
 	Publisher string
 	PubYear   int
+	Image     string
 }
