@@ -2,9 +2,9 @@ package controller
 
 import (
 	"amaryllis-api/book"
+	"amaryllis-api/model"
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
@@ -14,24 +14,22 @@ func ReadBookImg(c echo.Context) error {
 	isbn := c.Param("isbn")
 	sess, _ := session.Get("session", c)
 	_, is_ok := sess.Values["UserID"].(string)
-	if !FindImg(isbn) {
-		if is_ok {
-			book.GetBookImg(isbn)
+	book_data := new(model.Book)
+	err := model.DB.Where("isbn = ?", isbn).First(book_data).Error
+	if err != nil || book_data.Image == "Failed" {
+		return c.NoContent(http.StatusNotFound)
+	}
+	if !is_ok {
+		return c.NoContent(http.StatusForbidden)
+	} else if book_data.Image == "" {
+		if !book.GetBookImg(isbn) {
+			book_data.Image = "Failed"
+			model.DB.Save(book_data)
+			return c.NoContent(http.StatusNotFound)
 		} else {
-			return c.NoContent(http.StatusForbidden)
+			book_data.Image = "Success"
+			model.DB.Save(book_data)
 		}
 	}
 	return c.File(fmt.Sprintf("./book_imgs/%s.jpg", isbn))
-}
-
-func FindImg(isbn string) bool {
-	img_names, _ := os.ReadDir("./book_imgs")
-	is_img_exist := false
-	for _, img_name := range img_names {
-		if (isbn + ".jpg") == img_name.Name() {
-			is_img_exist = true
-			break
-		}
-	}
-	return is_img_exist
 }
