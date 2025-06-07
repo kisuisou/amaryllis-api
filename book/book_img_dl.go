@@ -1,12 +1,15 @@
 package book
 
 import (
+	"amaryllis-api/data_store"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -24,9 +27,19 @@ type rakuten_api_res struct {
 }
 
 func GetBookImg(isbn string) bool {
-	time.Sleep(1 * time.Second)
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("loading .env failed")
+	}
+	ctx := context.Background()
+	last_fetch_str, err := data_store.Rdb.Get(ctx, "ndl_img_last_fetch").Result()
+	last_fetch, _ := strconv.Atoi(last_fetch_str)
+	if err == nil {
+		for {
+			now_unix_time := time.Now().Unix()
+			if now_unix_time-int64(last_fetch) > 1 {
+				break
+			}
+		}
 	}
 	res, err := http.Get(fmt.Sprintf("%s%s.jpg", ndl_url, isbn))
 	if err != nil {
@@ -35,6 +48,10 @@ func GetBookImg(isbn string) bool {
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		app_id := os.Getenv("RAKUTEN_APP_ID")
+		err = data_store.Rdb.Set(ctx, "rakuten_last_fetch", strconv.Itoa(int(time.Now().Unix())), 0).Err()
+		if err != nil {
+			log.Fatal(err)
+		}
 		res, err = http.Get(fmt.Sprintf("%s&isbn=%s&applicationId=%s", rakuten_url, isbn, app_id))
 		if err != nil {
 			log.Fatal(err)
@@ -56,6 +73,15 @@ func GetBookImg(isbn string) bool {
 			log.Fatal(err)
 		}
 		defer res.Body.Close()
+		err = data_store.Rdb.Set(ctx, "rakuten_last_fetch", strconv.Itoa(int(time.Now().Unix())), 0).Err()
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		err = data_store.Rdb.Set(ctx, "ndl_img_last_fetch", strconv.Itoa(int(time.Now().Unix())), 0).Err()
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	file, _ := os.Create(fmt.Sprintf("./book_imgs/%s.jpg", isbn))
 	defer file.Close()

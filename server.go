@@ -3,6 +3,7 @@ package main
 import (
 	"amaryllis-api/book"
 	"amaryllis-api/controller"
+	"amaryllis-api/data_store"
 	"amaryllis-api/model"
 	"flag"
 	"fmt"
@@ -24,6 +25,7 @@ func main() {
 	}
 	flag.Parse()
 	model.Connect()
+	data_store.Connect()
 	if len(flag.Args()) == 0 {
 		frontend_origin := os.Getenv("FRONTEND_ORIGIN")
 		e := echo.New()
