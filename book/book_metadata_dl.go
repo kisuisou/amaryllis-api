@@ -20,9 +20,11 @@ const api_url = "https://ndlsearch.ndl.go.jp/api/opensearch"
 type APIBookData struct {
 	XMLName xml.Name `xml:"rss"`
 	Items   []struct {
-		Title      string   `xml:"http://purl.org/dc/elements/1.1/ title"`
-		Creator    []string `xml:"http://purl.org/dc/elements/1.1/ creator"`
-		Identifier []struct {
+		Title                string   `xml:"http://purl.org/dc/elements/1.1/ title"`
+		TitleTranscription   string   `xml:"http://ndl.go.jp/dcndl/terms/ titleTranscription"`
+		CreatorTranscription string   `xml:"http://ndl.go.jp/dcndl/terms/ creatorTranscription"`
+		Creator              []string `xml:"http://purl.org/dc/elements/1.1/ creator"`
+		Identifier           []struct {
 			Type    string `xml:"http://www.w3.org/2001/XMLSchema-instance type,attr"`
 			Content string `xml:",chardata"`
 		} `xml:"http://purl.org/dc/elements/1.1/ identifier"`
@@ -87,6 +89,8 @@ func GetMetaData(isbn string) model.Book {
 		creator = re.ReplaceAllString(creator, "")
 		book_data.Creator = creator
 	}
+	book_data.TitleTranscription = data.Items[item_i].TitleTranscription
+	book_data.CreatorTranscription = data.Items[item_i].CreatorTranscription
 	book_data.Publisher = strings.Join(data.Items[item_i].Publisher, "")
 	book_data.ISBN = isbn
 	book_data.Volume = data.Items[item_i].Volume
