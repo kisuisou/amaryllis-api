@@ -48,9 +48,15 @@ func GetBookImg(isbn string) bool {
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		app_id := os.Getenv("RAKUTEN_APP_ID")
-		err = data_store.Rdb.Set(ctx, "rakuten_last_fetch", strconv.Itoa(int(time.Now().Unix())), 0).Err()
-		if err != nil {
-			log.Fatal(err)
+		last_fetch_str, err := data_store.Rdb.Get(ctx, "rakuten_last_fetch").Result()
+		last_fetch, _ := strconv.Atoi(last_fetch_str)
+		if err == nil {
+			for {
+				now_unix_time := time.Now().Unix()
+				if now_unix_time-int64(last_fetch) > 1 {
+					break
+				}
+			}
 		}
 		res, err = http.Get(fmt.Sprintf("%s&isbn=%s&applicationId=%s", rakuten_url, isbn, app_id))
 		if err != nil {
