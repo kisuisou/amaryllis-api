@@ -2,6 +2,7 @@ version: '3.8'
 
 volumes:
   postgres-data:
+  codex-data:
 
 services:
   app:
@@ -16,6 +17,7 @@ services:
 
     volumes:
       - ../..:/workspaces:cached
+      - codex-data:/home/vscode/.codex
       
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
