@@ -1,0 +1,529 @@
+openapi: 3.0.3
+info:
+  title: Amaryllis API
+  version: 0.1.0
+  description: |
+    Amaryllis APIは、ユーザーのセッション管理、書籍メタデータの解決、
+    書影の取得、ユーザーごとの読書リスト管理を提供します。
+
+    認証が必要なエンドポイントでは、`POST /signin`で発行されるCookieセッションを利用します。
+servers:
+  - url: http://localhost:1323
+    description: Local development server
+tags:
+  - name: Sessions
+    description: Cookieセッションによるサインイン状態の管理
+  - name: Users
+    description: ユーザーに関する操作
+  - name: Books
+    description: ISBNを起点にした書籍メタデータの取得と解決
+  - name: Book images
+    description: ISBNを起点にした書影画像の取得と解決
+  - name: User books
+    description: ユーザーごとの読書リスト管理
+paths:
+  /users:
+    post:
+      tags:
+        - Users
+      summary: ユーザーを作成する
+      description: |
+        ユーザー作成用のエンドポイントです。
+        現在の実装ではリクエストボディを処理せず、常に作成済みとして`201 Created`を返します。
+      operationId: createUser
+      responses:
+        "201":
+          description: ユーザー作成を受け付けました。
+  /signin:
+    get:
+      tags:
+        - Sessions
+      summary: 現在のセッションを取得する
+      description: |
+        Cookieセッションからサインイン中のユーザーIDを取得します。
+        未サインインの場合は`403 Forbidden`を返します。
+      operationId: readSession
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: サインイン中のユーザーを返します。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+              examples:
+                signedIn:
+                  value:
+                    user_id: alice
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags:
+        - Sessions
+      summary: サインインする
+      description: |
+        ユーザーIDとパスワードを検証し、成功時にCookieセッションを発行します。
+        CookieはHttpOnlyで、production環境ではSecure属性も付与されます。
+      operationId: createSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionRequest"
+            examples:
+              credentials:
+                value:
+                  user_id: alice
+                  password: correct-horse-battery-staple
+      responses:
+        "200":
+          description: サインインに成功しました。レスポンスボディはありません。
+          headers:
+            Set-Cookie:
+              description: セッションCookieです。
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags:
+        - Sessions
+      summary: サインアウトする
+      description: |
+        現在のCookieセッションからユーザーIDを削除します。
+        未サインインの場合は`403 Forbidden`を返します。
+      operationId: deleteSession
+      security:
+        - cookieAuth: []
+      responses:
+        "204":
+          description: サインアウトしました。レスポンスボディはありません。
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /books/{id}:
+    get:
+      tags:
+        - Books
+      summary: 書籍を取得する
+      description: |
+        書籍IDを指定して、保存済みの書籍メタデータと関連する識別子を取得します。
+        セッションがない場合は`403 Forbidden`、書籍が存在しない場合は`404 Not Found`を返します。
+      operationId: readBook
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          description: 書籍情報を返します。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /books/resolve:
+    post:
+      tags:
+        - Books
+      summary: ISBNから書籍を解決する
+      description: |
+        ISBNから書籍を検索または作成します。
+        既にDBに書籍がある場合は書籍情報を返します。
+        新規作成時はメタデータ取得をバックグラウンドで開始し、`202 Accepted`を返します。
+      operationId: resolveBook
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveBookRequest"
+            examples:
+              isbn:
+                value:
+                  type: isbn
+                  value: "9784003101018"
+              legacyIsbnField:
+                summary: isbnフィールドでも指定できます
+                value:
+                  isbn: "9784003101018"
+      responses:
+        "200":
+          description: 解決済みの書籍情報を返します。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookResponse"
+        "202":
+          description: 書籍を作成し、メタデータ取得をバックグラウンドで開始しました。
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /book_imgs/{id}:
+    get:
+      tags:
+        - Book images
+      summary: 書影画像を取得する
+      description: |
+        書籍IDに対応する保存済みの書影JPEGを返します。
+        書影取得が成功済みでない場合、またはISBNが見つからない場合は`404 Not Found`を返します。
+      operationId: readBookImg
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          description: 書影画像を返します。
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /book_imgs/resolve:
+    post:
+      tags:
+        - Book images
+      summary: ISBNから書影画像を解決する
+      description: |
+        ISBNから書籍を解決したうえで、書影JPEGを取得します。
+        書影取得が未実行または処理中の場合はバックグラウンド処理を進め、`202 Accepted`を返します。
+        取得済みの場合は画像ファイルを直接返します。
+      operationId: resolveBookImg
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveBookRequest"
+            examples:
+              isbn:
+                value:
+                  type: isbn
+                  value: "9784003101018"
+      responses:
+        "200":
+          description: 解決済みの書影画像を返します。
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        "202":
+          description: 書籍または書影の取得処理をバックグラウンドで進めています。
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /user_books:
+    post:
+      tags:
+        - User books
+      summary: 読書リストに書籍を追加する
+      description: |
+        サインイン中のユーザーの読書リストに、指定した書籍を追加します。
+        既に同じ書籍が登録済みの場合は`409 Conflict`を返します。
+      operationId: createUserBook
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBookRequest"
+            examples:
+              unreadBook:
+                value:
+                  book_id: 1
+                  is_read: false
+      responses:
+        "201":
+          description: 読書リストに追加しました。レスポンスボディはありません。
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /user_books/{user_id}:
+    get:
+      tags:
+        - User books
+      summary: ユーザーの読書リストを取得する
+      description: |
+        指定したユーザーIDの読書リストを取得します。
+        現在の実装では、サインイン済みであればパス上の任意のユーザーIDを指定できます。
+      operationId: readUserBooks
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: 読書リストを取得するユーザーIDです。
+          schema:
+            type: string
+          example: alice
+      responses:
+        "200":
+          description: 読書リストを返します。
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserBook"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: "`POST /signin`で発行されるCookieセッションです。"
+  parameters:
+    BookId:
+      name: id
+      in: path
+      required: true
+      description: 書籍IDです。
+      schema:
+        type: integer
+        format: uint32
+        minimum: 1
+      example: 1
+  responses:
+    BadRequest:
+      description: リクエストの形式、パスパラメータ、または識別子が不正です。レスポンスボディはありません。
+    Forbidden:
+      description: 認証に失敗した、またはセッションがありません。レスポンスボディはありません。
+    NotFound:
+      description: 指定したリソースが見つかりません。レスポンスボディはありません。
+    Conflict:
+      description: 同じリソースが既に登録されています。レスポンスボディはありません。
+  schemas:
+    CreateSessionRequest:
+      type: object
+      required:
+        - user_id
+        - password
+      properties:
+        user_id:
+          type: string
+          description: サインインするユーザーIDです。
+          example: alice
+        password:
+          type: string
+          format: password
+          description: サインインするユーザーのパスワードです。
+          example: correct-horse-battery-staple
+    Session:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+          description: サインイン中のユーザーIDです。
+          example: alice
+    ResolveBookRequest:
+      type: object
+      description: |
+        書籍または書影を解決するための識別子です。
+        `isbn`が指定された場合は、`type`と`value`より優先されます。
+        現在の実装で利用できる`type`は`isbn`のみです。
+      properties:
+        type:
+          type: string
+          description: 識別子の種類です。省略時は`isbn`として扱われます。
+          enum:
+            - isbn
+          example: isbn
+        value:
+          type: string
+          description: 識別子の値です。ISBNの場合、ハイフンと空白は除去されます。
+          example: "9784003101018"
+        isbn:
+          type: string
+          description: ISBNを直接指定する互換フィールドです。指定時は`type`と`value`より優先されます。
+          example: "9784003101018"
+    CreateUserBookRequest:
+      type: object
+      required:
+        - book_id
+        - is_read
+      properties:
+        book_id:
+          type: integer
+          format: uint32
+          minimum: 1
+          description: 読書リストへ追加する書籍IDです。
+          example: 1
+        is_read:
+          type: boolean
+          description: 既読として登録する場合は`true`、未読として登録する場合は`false`です。
+          example: false
+    BookResponse:
+      type: object
+      required:
+        - MetaData
+        - Identifiers
+      properties:
+        MetaData:
+          $ref: "#/components/schemas/Book"
+        Identifiers:
+          type: array
+          description: 書籍に紐づく識別子の一覧です。
+          items:
+            $ref: "#/components/schemas/BookIdentifier"
+    UserBook:
+      type: object
+      required:
+        - MetaData
+        - ISBN
+        - IsRead
+        - CreatedAt
+      properties:
+        MetaData:
+          $ref: "#/components/schemas/Book"
+        ISBN:
+          type: string
+          description: 読書リスト上の書籍に紐づく代表ISBNです。
+          example: "9784003101018"
+        IsRead:
+          type: boolean
+          description: 既読として登録されている場合は`true`です。
+          example: false
+        CreatedAt:
+          type: integer
+          format: uint32
+          description: 読書リストへ追加された日時のUnix秒です。
+          example: 1735689600
+    Book:
+      type: object
+      required:
+        - ID
+        - Title
+        - TitleTranscription
+        - Volume
+        - Creator
+        - CreatorTranscription
+        - NDC9
+        - NDC10
+        - NDLC
+        - Publisher
+        - PubYear
+        - MetaDataStatus
+        - ImageStatus
+      properties:
+        ID:
+          type: integer
+          format: uint32
+          description: 書籍IDです。
+          example: 1
+        Title:
+          type: string
+          description: 書籍タイトルです。
+          example: こころ
+        TitleTranscription:
+          type: string
+          description: タイトルの読みです。
+          example: ココロ
+        Volume:
+          type: string
+          description: 巻次や巻号です。単巻の場合は空文字のことがあります。
+          example: ""
+        Creator:
+          type: string
+          description: 著者、編者などの作成者です。
+          example: 夏目漱石
+        CreatorTranscription:
+          type: string
+          description: 作成者名の読みです。
+          example: ナツメ, ソウセキ
+        NDC9:
+          type: string
+          description: 日本十進分類法9版の分類記号です。
+          example: "913.6"
+        NDC10:
+          type: string
+          description: 日本十進分類法10版の分類記号です。
+          example: "913.6"
+        NDLC:
+          type: string
+          description: 国立国会図書館分類の分類記号です。
+          example: KH971
+        Publisher:
+          type: string
+          description: 出版者です。
+          example: 岩波書店
+        PubYear:
+          type: integer
+          description: 出版年です。
+          example: 1989
+        MetaDataStatus:
+          $ref: "#/components/schemas/ProcessingStatus"
+        ImageStatus:
+          $ref: "#/components/schemas/ProcessingStatus"
+    BookIdentifier:
+      type: object
+      required:
+        - ID
+        - BookID
+        - Type
+        - Value
+      properties:
+        ID:
+          type: integer
+          format: uint32
+          description: 識別子IDです。
+          example: 1
+        BookID:
+          type: integer
+          format: uint
+          description: 紐づく書籍IDです。
+          example: 1
+        Type:
+          type: string
+          description: 識別子の種類です。
+          example: isbn
+        Value:
+          type: string
+          description: 識別子の値です。
+          example: "9784003101018"
+    ProcessingStatus:
+      type: string
+      description: |
+        外部データ取得処理の状態です。
+        `Waiting`は未実行、`Processing`は処理中、`Success`は取得成功、`Failed`は取得失敗を表します。
+      enum:
+        - Waiting
+        - Processing
+        - Success
+        - Failed
+      example: Success

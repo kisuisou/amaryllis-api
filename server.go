@@ -36,6 +36,9 @@ func main() {
 			AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodDelete},
 			AllowCredentials: true,
 		}))
+		e.File("/docs", "docs/redoc.html")
+		e.File("/docs/", "docs/redoc.html")
+		e.File("/openapi.yaml", "docs/openapi.yaml")
 		e.POST("/users", controller.CreateUser)
 		e.GET("/signin", controller.ReadSession)
 		e.POST("/signin", controller.CreateSession)
