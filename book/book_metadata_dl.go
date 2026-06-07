@@ -7,7 +7,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -38,7 +37,7 @@ type APIBookData struct {
 	} `xml:"channel>item"`
 }
 
-func GetMetaData(isbn string) model.Book {
+func GetMetaData(isbn string, book_data *model.Book) error {
 	ctx := context.Background()
 	last_fetch_str, err := data_store.Rdb.Get(ctx, "ndl_last_fetch").Result()
 	last_fetch, _ := strconv.Atoi(last_fetch_str)
@@ -52,7 +51,7 @@ func GetMetaData(isbn string) model.Book {
 	}
 	res, err := http.Get(fmt.Sprintf("%s?isbn=%s", api_url, isbn))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer res.Body.Close()
 	res_byte, _ := io.ReadAll(res.Body)
@@ -81,7 +80,9 @@ func GetMetaData(isbn string) model.Book {
 			}
 		}
 	}
-	book_data := new(model.Book)
+	if len(data.Items) == 0 {
+		return fmt.Errorf("検索結果がゼロ件です")
+	}
 	book_data.Title = data.Items[item_i].Title
 	if len(data.Items[item_i].Creator) != 0 {
 		creator := data.Items[item_i].Creator[0]
@@ -100,9 +101,10 @@ func GetMetaData(isbn string) model.Book {
 	book_data.NDC9 = ndc9
 	book_data.NDC10 = ndc10
 	book_data.NDLC = ndlc
+	book_data.ImageStatus = "Waiting"
 	err = data_store.Rdb.Set(ctx, "ndl_last_fetch", strconv.Itoa(int(time.Now().Unix())), 0).Err()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	return *book_data
+	return nil
 }

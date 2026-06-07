@@ -53,6 +53,9 @@ func ResolveBook(c echo.Context) error {
 	if err != nil {
 		return c.NoContent(http.StatusBadRequest)
 	}
+	if book_data == nil {
+		return c.NoContent(http.StatusAccepted)
+	}
 	return c.JSON(http.StatusOK, buildBookRes(*book_data))
 }
 
@@ -72,6 +75,7 @@ func resolveBook(req *resolveBookReq) (*model.Book, error) {
 		return nil, echo.NewHTTPError(http.StatusBadRequest)
 	}
 
+	//ISBNから書籍IDを検索、あれば書籍リソースを取得して返却
 	book_identifier := new(model.BookIdentifier)
 	if err := model.DB.Where("type = ? AND value = ?", identifier_type, identifier_value).First(book_identifier).Error; err == nil {
 		book_data := new(model.Book)
@@ -80,10 +84,13 @@ func resolveBook(req *resolveBookReq) (*model.Book, error) {
 		}
 	}
 
-	book_data := book.GetMetaData(identifier_value)
-	if err := model.DB.Create(&book_data).Error; err != nil {
+	//ない場合作成、まずは状態をprocessingとして書籍リソースを登録
+	book_data := new(model.Book)
+	book_data.MetaDataStatus = "Processing"
+	if err := model.DB.Create(book_data).Error; err != nil {
 		return nil, err
 	}
+	//isbnと書籍IDのマッピングを保存する
 	book_identifier = &model.BookIdentifier{
 		BookID: book_data.ID,
 		Type:   identifier_type,
@@ -92,7 +99,18 @@ func resolveBook(req *resolveBookReq) (*model.Book, error) {
 	if err := model.DB.Create(book_identifier).Error; err != nil {
 		return nil, err
 	}
-	return &book_data, nil
+
+	//go routineでメタデータ取得処理を実行し、一旦nilを返す
+	go func(book_data *model.Book) {
+		if book.GetMetaData(identifier_value, book_data) != nil {
+			book_data.MetaDataStatus = "Failed"
+		} else {
+			book_data.MetaDataStatus = "Success"
+		}
+		model.DB.Save(book_data)
+	}(book_data)
+
+	return nil, nil
 }
 
 func primaryISBN(book_id uint) string {

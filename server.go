@@ -65,7 +65,9 @@ func main() {
 		}
 
 	} else if flag.Arg(0) == "get_book_data" {
-		fmt.Println(book.GetMetaData(flag.Arg(1)))
+		book_data := new(model.Book)
+		book.GetMetaData(flag.Arg(1), book_data)
+		fmt.Println(book_data)
 	} else if flag.Arg(0) == "get_book_img" {
 		book.GetBookImg(flag.Arg(1))
 	}
