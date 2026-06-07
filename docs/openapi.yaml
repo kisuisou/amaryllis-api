@@ -299,6 +299,69 @@ paths:
                   $ref: "#/components/schemas/UserBook"
         "403":
           $ref: "#/components/responses/Forbidden"
+    put:
+      tags:
+        - User books
+      summary: 読書リスト上の既読状態を更新する
+      description: |
+        指定したユーザーIDの読書リストから`book_id`に一致する書籍を探し、既読状態を更新します。
+        対象の登録が見つからない場合は`404 Not Found`を返します。
+      operationId: updateUserBooks
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBookRequest"
+            examples:
+              markAsRead:
+                value:
+                  book_id: 1
+                  is_read: true
+      responses:
+        "204":
+          description: 既読状態を更新しました。レスポンスボディはありません。
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags:
+        - User books
+      summary: 読書リストから書籍を削除する
+      description: |
+        指定したユーザーIDの読書リストから、`book_id`に一致する書籍を削除します。
+        対象の登録が見つからない場合は`404 Not Found`を返します。
+      operationId: deleteUserBooks
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteUserBookRequest"
+            examples:
+              removeBook:
+                value:
+                  book_id: 1
+      responses:
+        "204":
+          description: 読書リストから削除しました。レスポンスボディはありません。
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
   securitySchemes:
     cookieAuth:
@@ -317,6 +380,14 @@ components:
         format: uint32
         minimum: 1
       example: 1
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      description: 読書リストを操作するユーザーIDです。
+      schema:
+        type: string
+      example: alice
   responses:
     BadRequest:
       description: リクエストの形式、パスパラメータ、または識別子が不正です。レスポンスボディはありません。
@@ -388,6 +459,33 @@ components:
           type: boolean
           description: 既読として登録する場合は`true`、未読として登録する場合は`false`です。
           example: false
+    UpdateUserBookRequest:
+      type: object
+      required:
+        - book_id
+        - is_read
+      properties:
+        book_id:
+          type: integer
+          format: uint32
+          minimum: 1
+          description: 既読状態を更新する書籍IDです。
+          example: 1
+        is_read:
+          type: boolean
+          description: 既読にする場合は`true`、未読に戻す場合は`false`です。
+          example: true
+    DeleteUserBookRequest:
+      type: object
+      required:
+        - book_id
+      properties:
+        book_id:
+          type: integer
+          format: uint32
+          minimum: 1
+          description: 読書リストから削除する書籍IDです。
+          example: 1
     BookResponse:
       type: object
       required:

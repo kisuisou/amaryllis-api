@@ -33,7 +33,7 @@ func main() {
 		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 			AllowOrigins:     []string{frontend_origin},
 			AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAccessControlAllowOrigin},
-			AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodDelete},
+			AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 			AllowCredentials: true,
 		}))
 		e.File("/docs", "docs/redoc.html")
@@ -45,6 +45,8 @@ func main() {
 		e.DELETE("/signin", controller.DeleteSession)
 		e.GET("/user_books/:user_id", controller.ReadUserBooks)
 		e.POST("/user_books", controller.CreateUserBook)
+		e.PUT("/user_books/:user_id", controller.UpdateUserBooks)
+		e.DELETE("/user_books/:user_id", controller.DeleteUserBooks)
 		e.GET("/book_imgs/:id", controller.ReadBookImg)
 		e.POST("/book_imgs/resolve", controller.ResolveBookImg)
 		e.GET("/books/:id", controller.ReadBook)

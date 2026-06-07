@@ -20,6 +20,15 @@ type user_books_res struct {
 	CreatedAt uint
 }
 
+type update_user_books_req struct {
+	BookID uint `json:"book_id"`
+	IsRead bool `json:"is_read"`
+}
+
+type delete_user_books_req struct {
+	BookID uint `json:"book_id"`
+}
+
 func CreateUserBook(c echo.Context) error {
 	req := new(create_user_book_req)
 	if err := c.Bind(req); err != nil {
@@ -67,4 +76,49 @@ func ReadUserBooks(c echo.Context) error {
 		response = append(response, res)
 	}
 	return c.JSON(http.StatusOK, response)
+}
+
+func UpdateUserBooks(c echo.Context) error {
+	req := new(update_user_books_req)
+	if err := c.Bind(req); err != nil {
+		return c.NoContent(http.StatusBadRequest)
+	}
+	user_id := c.Param("user_id")
+	sess, _ := session.Get("session", c)
+	_, is_ok := sess.Values["UserID"].(string)
+	if !is_ok {
+		return c.NoContent(http.StatusForbidden)
+	}
+	if req.BookID == 0 {
+		return c.NoContent(http.StatusBadRequest)
+	}
+	user_book := new(model.UserBooks)
+	if err := model.DB.Where("user_id = ? AND book_id = ?", user_id, req.BookID).First(user_book).Error; err != nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+	user_book.IsRead = req.IsRead
+	model.DB.Save(user_book)
+	return c.NoContent(http.StatusNoContent)
+}
+
+func DeleteUserBooks(c echo.Context) error {
+	req := new(delete_user_books_req)
+	if err := c.Bind(req); err != nil {
+		return c.NoContent(http.StatusBadRequest)
+	}
+	user_id := c.Param("user_id")
+	sess, _ := session.Get("session", c)
+	_, is_ok := sess.Values["UserID"].(string)
+	if !is_ok {
+		return c.NoContent(http.StatusForbidden)
+	}
+	if req.BookID == 0 {
+		return c.NoContent(http.StatusBadRequest)
+	}
+	user_book := new(model.UserBooks)
+	if err := model.DB.Where("user_id = ? AND book_id = ?", user_id, req.BookID).First(user_book).Error; err != nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+	model.DB.Delete(user_book)
+	return c.NoContent(http.StatusNoContent)
 }
