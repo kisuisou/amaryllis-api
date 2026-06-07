@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"amaryllis-api/book"
 	"amaryllis-api/model"
 	"net/http"
 
@@ -10,12 +9,13 @@ import (
 )
 
 type create_user_book_req struct {
-	ISBN   string `json:"isbn"`
-	IsRead bool   `json:"is_read"`
+	BookID uint `json:"book_id"`
+	IsRead bool `json:"is_read"`
 }
 
 type user_books_res struct {
 	MetaData  model.Book
+	ISBN      string
 	IsRead    bool
 	CreatedAt uint
 }
@@ -30,17 +30,18 @@ func CreateUserBook(c echo.Context) error {
 	if !is_ok {
 		return c.NoContent(http.StatusForbidden)
 	}
+	if req.BookID == 0 {
+		return c.NoContent(http.StatusBadRequest)
+	}
 	book_data := new(model.Book)
+	if err := model.DB.First(book_data, req.BookID).Error; err != nil {
+		return c.NoContent(http.StatusNotFound)
+	}
 	user_book_data := new(model.UserBooks)
-	err := model.DB.Where("isbn = ?", req.ISBN).First(book_data).Error
-	err2 := model.DB.Where("book_isbn = ? AND user_id = ?", req.ISBN, user_id).First(user_book_data).Error
-	if err != nil {
-		*book_data = book.GetMetaData(req.ISBN)
-		model.DB.Create(book_data)
-	} else if err2 == nil {
+	if err := model.DB.Where("book_id = ? AND user_id = ?", book_data.ID, user_id).First(user_book_data).Error; err == nil {
 		return c.NoContent(http.StatusConflict)
 	}
-	user_book_data.BookISBN = book_data.ISBN
+	user_book_data.BookID = book_data.ID
 	user_book_data.UserID = user_id
 	user_book_data.IsRead = req.IsRead
 	model.DB.Omit("id").Create(user_book_data)
@@ -59,7 +60,8 @@ func ReadUserBooks(c echo.Context) error {
 	model.DB.Where("user_id = ?", user_id).Find(user_books)
 	for _, user_book := range *user_books {
 		var res user_books_res
-		model.DB.Where("isbn = ?", user_book.BookISBN).First(&res.MetaData)
+		model.DB.First(&res.MetaData, user_book.BookID)
+		res.ISBN = primaryISBN(user_book.BookID)
 		res.CreatedAt = uint(user_book.CreatedAt.Unix())
 		res.IsRead = user_book.IsRead
 		response = append(response, res)

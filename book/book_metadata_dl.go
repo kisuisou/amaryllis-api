@@ -92,7 +92,6 @@ func GetMetaData(isbn string) model.Book {
 	book_data.TitleTranscription = data.Items[item_i].TitleTranscription
 	book_data.CreatorTranscription = data.Items[item_i].CreatorTranscription
 	book_data.Publisher = strings.Join(data.Items[item_i].Publisher, "")
-	book_data.ISBN = isbn
 	book_data.Volume = data.Items[item_i].Volume
 	book_data.PubYear, err = strconv.Atoi(data.Items[item_i].PubYear)
 	if err != nil {

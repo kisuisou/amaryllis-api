@@ -7,7 +7,7 @@ import (
 type UserBooks struct {
 	ID        uint `gorm:"primaryKey;autoIncrement"`
 	UserID    string
-	BookISBN  string
+	BookID    uint
 	IsRead    bool
 	CreatedAt time.Time
 }

@@ -1,7 +1,7 @@
 package model
 
 type Book struct {
-	ISBN                 string `gorm:"primaryKey"`
+	ID                   uint `gorm:"primaryKey;autoIncrement"`
 	Title                string
 	TitleTranscription   string
 	Volume               string
@@ -13,4 +13,11 @@ type Book struct {
 	Publisher            string
 	PubYear              int
 	Image                string
+}
+
+type BookIdentifier struct {
+	ID     uint   `gorm:"primaryKey;autoIncrement"`
+	BookID uint   `gorm:"index;not null"`
+	Type   string `gorm:"uniqueIndex:idx_book_identifiers_type_value;not null"`
+	Value  string `gorm:"uniqueIndex:idx_book_identifiers_type_value;not null"`
 }
